@@ -151,7 +151,8 @@ class MainWindow(QMainWindow):
         if dialog.exec():
             updated_data = dialog.get_host_data()
             try:
-                self.db.update_host(host_data['id'], **updated_data)
+                host_id = updated_data.pop('id', host_data['id'])
+                self.db.update_host(host_id, **updated_data)
                 self.load_hosts()
                 QMessageBox.information(self, "成功", "主机已更新")
             except Exception as e:
