@@ -118,6 +118,46 @@ uv run python main.py
 uv add package_name
 ```
 
+## 打包为可执行文件
+
+### Windows
+
+**方法1：使用批处理脚本（推荐）**
+
+双击运行 `build.bat`，或在命令行中执行：
+```bash
+build.bat
+```
+
+**方法2：手动打包**
+
+```bash
+# 1. 安装打包工具
+uv sync
+
+# 2. 使用PyInstaller打包
+uv run pyinstaller build.spec --clean
+
+# 3. 生成的exe文件位于 dist/SSHive.exe
+```
+
+### 打包选项
+
+如果需要自定义打包，可以编辑 `build.spec` 文件：
+
+- `console=False` - 不显示控制台窗口（GUI应用）
+- `console=True` - 显示控制台窗口（便于调试）
+- `icon='path/to/icon.ico'` - 设置应用图标
+- `upx=True` - 使用UPX压缩（减小文件大小）
+
+### 分发说明
+
+打包后的exe文件可以直接分发给其他用户，无需安装Python环境。首次运行时会自动创建：
+- `sshive.db` - 数据库文件
+- `sshive.key` - 加密密钥文件
+
+**注意**：不同用户的数据库文件不通用，因为加密密钥不同。
+
 ## 许可证
 
 本项目仅供学习和个人使用。
