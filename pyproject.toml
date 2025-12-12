@@ -1,0 +1,11 @@
+[project]
+name = "sshive"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "PyQt6>=6.6.0",
+    "paramiko>=3.4.0",
+    "cryptography>=41.0.0",
+]
