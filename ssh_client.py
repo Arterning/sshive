@@ -57,7 +57,7 @@ class SSHClient(QObject):
                     self.connection_error.emit(f"读取输出错误: {str(e)}")
                 break
 
-    def send_command(self, command: str):
+    def send_command(self, command: bytes):
         """发送命令到SSH服务器"""
         if self.is_connected and self.channel:
             try:
