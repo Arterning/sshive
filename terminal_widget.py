@@ -174,6 +174,22 @@ class TerminalWidget(QTextEdit):
 
     def _process_escape_sequence(self, seq: str):
         """处理ANSI转义序列"""
+        # 清屏序列：ESC [ 2 J 或 ESC [ H ESC [ 2 J
+        if seq == '\x1b[2J' or seq == '\x1b[H':
+            if seq == '\x1b[2J':
+                self.clear()
+                self.current_format = QTextCharFormat()
+                self.current_format.setForeground(self.default_fg_color)
+            return
+
+        # 清除行序列：ESC [ K
+        if seq == '\x1b[K':
+            return
+
+        # 光标移动序列 - 暂时忽略
+        if seq.startswith('\x1b[') and seq[-1] in 'ABCDEFGH':
+            return
+
         # CSI序列：ESC [ ... m (SGR - 设置图形属性)
         if seq.startswith('\x1b[') and seq.endswith('m'):
             params = seq[2:-1]
