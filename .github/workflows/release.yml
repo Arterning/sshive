@@ -1,0 +1,166 @@
+name: Build and Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '版本号 (例如: v1.0.0)'
+        required: true
+        type: string
+      build_linux:
+        description: '是否同时打包 Linux'
+        required: false
+        type: boolean
+        default: false
+      build_macos:
+        description: '是否同时打包 macOS'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: 安装 uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: 安装依赖
+        run: |
+          uv sync
+
+      - name: 打包应用
+        run: |
+          uv run pyinstaller build.spec --clean
+
+      - name: 重命名文件
+        run: |
+          mv dist/SSHive.exe dist/SSHive-${{ inputs.version }}-windows.exe
+
+      - name: 上传构建产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-build
+          path: dist/SSHive-${{ inputs.version }}-windows.exe
+
+  build-linux:
+    if: ${{ inputs.build_linux }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: 安装系统依赖
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libxcb-xinerama0 libxcb-cursor0
+
+      - name: 安装 uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: 安装依赖
+        run: |
+          uv sync
+
+      - name: 打包应用
+        run: |
+          uv run pyinstaller build.spec --clean
+
+      - name: 重命名文件
+        run: |
+          mv dist/SSHive dist/SSHive-${{ inputs.version }}-linux
+
+      - name: 上传构建产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-build
+          path: dist/SSHive-${{ inputs.version }}-linux
+
+  build-macos:
+    if: ${{ inputs.build_macos }}
+    runs-on: macos-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: 安装 uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: 安装依赖
+        run: |
+          uv sync
+
+      - name: 打包应用
+        run: |
+          uv run pyinstaller build.spec --clean
+
+      - name: 重命名文件
+        run: |
+          mv dist/SSHive dist/SSHive-${{ inputs.version }}-macos
+
+      - name: 上传构建产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-build
+          path: dist/SSHive-${{ inputs.version }}-macos
+
+  create-release:
+    needs: [build-windows, build-linux, build-macos]
+    if: always() && needs.build-windows.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: 下载所有构建产物
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: 创建 Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ inputs.version }}
+          name: Release ${{ inputs.version }}
+          draft: false
+          prerelease: false
+          files: |
+            artifacts/**/*
+          body: |
+            ## SSHive ${{ inputs.version }}
+
+            ### 下载说明
+            - **Windows 用户**: 下载 `SSHive-${{ inputs.version }}-windows.exe`
+            - **Linux 用户**: 下载 `SSHive-${{ inputs.version }}-linux` (需添加执行权限: `chmod +x SSHive-${{ inputs.version }}-linux`)
+            - **macOS 用户**: 下载 `SSHive-${{ inputs.version }}-macos` (需添加执行权限: `chmod +x SSHive-${{ inputs.version }}-macos`)
+
+            ### 更新内容
+            <!-- 请在这里手动添加更新内容 -->
+
+            ---
+            🤖 此 Release 由 GitHub Actions 自动构建生成
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
