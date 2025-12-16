@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QTextEdit
+from PyQt6.QtWidgets import QTextEdit, QApplication
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QFont, QTextCursor, QKeyEvent, QColor, QTextCharFormat
 import re
@@ -87,6 +87,17 @@ class TerminalWidget(QTextEdit):
             self.command_entered.emit(b'\x0c')
             return
 
+        # Ctrl+V (粘贴)
+        if key == Qt.Key.Key_V and modifiers == Qt.KeyboardModifier.ControlModifier:
+            clipboard = QApplication.clipboard()
+            text = clipboard.text()
+            if text:
+                try:
+                    self.command_entered.emit(text.encode('utf-8'))
+                except:
+                    pass
+            return
+
         # Enter/Return
         if key in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
             self.command_entered.emit(b'\r')
@@ -146,6 +157,9 @@ class TerminalWidget(QTextEdit):
 
     def append_output(self, text: str):
         """添加输出文本，解析ANSI转义序列"""
+        # 规范化换行符：将 \r\n 和单独的 \r 都转换为 \n
+        text = text.replace('\r\n', '\n').replace('\r', '\n')
+
         cursor = self.textCursor()
         cursor.movePosition(QTextCursor.MoveOperation.End)
 
@@ -176,8 +190,11 @@ class TerminalWidget(QTextEdit):
         self.ensureCursorVisible()
 
     def _process_text_with_backspace(self, text: str, cursor: QTextCursor) -> QTextCursor:
-        """处理包含backspace字符的文本"""
-        for char in text:
+        """处理包含控制字符的文本"""
+        i = 0
+        while i < len(text):
+            char = text[i]
+
             if char == '\x08':
                 # Backspace: 删除前一个字符
                 if not cursor.atStart():
@@ -188,10 +205,14 @@ class TerminalWidget(QTextEdit):
             elif char == '\x07':
                 # Bell响铃字符：忽略
                 pass
-            elif ord(char) >= 32 or char in '\r\n\t':
-                # 可打印字符或常用控制字符（换行、回车、制表符）
+            elif ord(char) >= 32 or char in '\n\t':
+                # 可打印字符或常用控制字符（换行、制表符）
+                # 注意：\r 已经在 append_output 中被转换为 \n
                 cursor.insertText(char, self.current_format)
             # 其他控制字符默认忽略
+
+            i += 1
+
         return cursor
 
     def _process_escape_sequence(self, seq: str):
