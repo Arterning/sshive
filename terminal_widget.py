@@ -94,7 +94,7 @@ class TerminalWidget(QTextEdit):
 
         # Backspace
         if key == Qt.Key.Key_Backspace:
-            self.command_entered.emit(b'\x7f')
+            self.command_entered.emit(b'\x08')
             return
 
         # Tab
@@ -157,7 +157,8 @@ class TerminalWidget(QTextEdit):
             # 插入转义序列之前的普通文本
             if match.start() > pos:
                 plain_text = text[pos:match.start()]
-                cursor.insertText(plain_text, self.current_format)
+                # 处理backspace和其他控制字符
+                cursor = self._process_text_with_backspace(plain_text, cursor)
 
             # 处理转义序列
             escape_seq = match.group()
@@ -167,10 +168,31 @@ class TerminalWidget(QTextEdit):
 
         # 插入剩余的普通文本
         if pos < len(text):
-            cursor.insertText(text[pos:], self.current_format)
+            remaining_text = text[pos:]
+            # 处理backspace和其他控制字符
+            cursor = self._process_text_with_backspace(remaining_text, cursor)
 
         self.setTextCursor(cursor)
         self.ensureCursorVisible()
+
+    def _process_text_with_backspace(self, text: str, cursor: QTextCursor) -> QTextCursor:
+        """处理包含backspace字符的文本"""
+        for char in text:
+            if char == '\x08':
+                # Backspace: 删除前一个字符
+                if not cursor.atStart():
+                    cursor.deletePreviousChar()
+            elif char == '\x7f':
+                # DEL字符：忽略，避免显示为方框
+                pass
+            elif char == '\x07':
+                # Bell响铃字符：忽略
+                pass
+            elif ord(char) >= 32 or char in '\r\n\t':
+                # 可打印字符或常用控制字符（换行、回车、制表符）
+                cursor.insertText(char, self.current_format)
+            # 其他控制字符默认忽略
+        return cursor
 
     def _process_escape_sequence(self, seq: str):
         """处理ANSI转义序列"""
