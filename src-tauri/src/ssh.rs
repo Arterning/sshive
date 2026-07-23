@@ -207,9 +207,9 @@ async fn run_ssh_session<R: Runtime>(
         .await
         .map_err(|e| format!("Channel open failed: {}", e))?;
 
-    // Request PTY
+    // Request PTY — disable remote echo since xterm.js handles local display
     channel
-        .request_pty(false, "xterm-256color", 80, 24, 0, 0, &[])
+        .request_pty(false, "xterm-256color", 80, 24, 0, 0, &[(russh::Pty::ECHO, 0)])
         .await
         .map_err(|e| format!("PTY request failed: {}", e))?;
 
