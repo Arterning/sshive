@@ -231,7 +231,7 @@ async fn run_ssh_session<R: Runtime>(
         tokio::time::timeout(std::time::Duration::from_millis(100), channel.wait()).await
     {}
     // Send empty command to get a clean prompt
-    let _ = channel.data(b"\n").await;
+    let _ = channel.data(b"\n".as_slice()).await;
 
     // Main event loop
     loop {
