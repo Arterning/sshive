@@ -209,7 +209,11 @@ async fn run_ssh_session<R: Runtime>(
 
     // Request PTY — disable remote echo since xterm.js handles local display
     channel
-        .request_pty(false, "xterm-256color", 80, 24, 0, 0, &[(russh::Pty::ECHO, 0)])
+        .request_pty(false, "xterm-256color", 80, 24, 0, 0, &[
+            (russh::Pty::ECHO, 0),
+            (russh::Pty::ICRNL, 1),
+            (russh::Pty::ONLCR, 1),
+        ])
         .await
         .map_err(|e| format!("PTY request failed: {}", e))?;
 
@@ -218,6 +222,16 @@ async fn run_ssh_session<R: Runtime>(
         .request_shell(true)
         .await
         .map_err(|e| format!("Shell request failed: {}", e))?;
+
+    // Drain bash's initial output (may contain duplicate prompt with ECHO=0),
+    // trigger a clean prompt via empty command
+    tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+    // Discard any initial data
+    while let Ok(Some(_)) =
+        tokio::time::timeout(std::time::Duration::from_millis(100), channel.wait()).await
+    {}
+    // Send empty command to get a clean prompt
+    let _ = channel.data(b"\n").await;
 
     // Main event loop
     loop {
