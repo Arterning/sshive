@@ -115,6 +115,9 @@ export function Terminal({ sessionId, onClose }: Props) {
     if (!term) return;
 
     const disposable = term.onData((data) => {
+      // Local echo (xterm.js v6 no longer echoes by default without a PTY)
+      term.write(data);
+      // Forward to SSH
       const bytes = new TextEncoder().encode(data);
       sshSend(parseInt(sessionId), bytes).catch(console.error);
     });
