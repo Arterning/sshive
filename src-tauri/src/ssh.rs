@@ -182,7 +182,7 @@ async fn run_ssh_session<R: Runtime>(
         let key = russh::keys::decode_secret_key(&key_data, None)
             .map_err(|e| format!("Failed to parse private key: {}", e))?;
 
-        let key_with_hash = russh::keys::PrivateKeyWithHashAlg::from_key(key);
+        let key_with_hash = russh::keys::PrivateKeyWithHashAlg::new(Arc::new(key), None);
 
         session
             .authenticate_publickey(&host.username, key_with_hash)
